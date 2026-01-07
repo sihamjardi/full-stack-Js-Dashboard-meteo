@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard météo temps réel</title>
+
+  <style>
+    table {
+      float: left;
+      border-collapse: collapse;
+      width: 35%;
+      border: 1px solid #ddd;
+      font-family: Verdana;
+    }
+    th, td {
+      border-bottom: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+    th {
+      color: gray;
+    }
+  </style>
+</head>
+
+<body>
+
+  <table id="myTable">
+    <thead>
+      <tr>
+        <th>Mois</th>
+        <th>Max / Min (°C)</th>
+        <th>Pluie</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div style="width: 60%; float: right;">
+    <canvas id="myChart" height="150"></canvas>
+    <canvas id="myChart1" height="150"></canvas>
+  </div>
+
+  <!-- Librairies -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
+  <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+
+  <script>
+    // Historique des données
+    var mois_tab = [];
+    var max_tab = [];
+    var min_tab = [];
+    var pluie_tab = [];
+
+    // Graphique Températures
+    var ctxTemp = document.getElementById("myChart").getContext("2d");
+    var chartTemp = new Chart(ctxTemp, {
+      type: "line",
+      data: {
+        labels: mois_tab,
+        datasets: [
+          {
+            label: "Température Max",
+            data: max_tab,
+            borderColor: "red",
+            fill: false
+          },
+          {
+            label: "Température Min",
+            data: min_tab,
+            borderColor: "blue",
+            fill: false
+          }
+        ]
+      },
+      options: {
+        scales: {
+          yAxes: [{ ticks: { beginAtZero: true } }]
+        }
+      }
+    });
+
+    // Graphique Pluie
+    var ctxPluie = document.getElementById("myChart1").getContext("2d");
+    var chartPluie = new Chart(ctxPluie, {
+      type: "bar",
+      data: {
+        labels: mois_tab,
+        datasets: [
+          {
+            label: "Jours de pluie",
+            data: pluie_tab,
+            backgroundColor: "lightblue"
+          }
+        ]
+      },
+      options: {
+        scales: {
+          yAxes: [{ ticks: { beginAtZero: true } }]
+        }
+      }
+    });
+
+    // Connexion WebSocket
+    var ws = new WebSocket("ws://localhost:5002");
+
+    ws.onmessage = function (event) {
+      var tab = JSON.parse(event.data);
+
+      // Stocker les données
+      mois_tab.push(tab.mois);
+      max_tab.push(Number(tab.tmax));
+      min_tab.push(Number(tab.tmin));
+      pluie_tab.push(Number(tab.pluie));
+
+      // Ajouter une ligne au tableau
+      var row = "<tr>"
+        + "<td>" + tab.mois + "</td>"
+        + "<td>" + tab.tmax + "° / " + tab.tmin + "°</td>"
+        + "<td>" + tab.pluie + " jours</td>"
+        + "</tr>";
+
+      $("#myTable tbody").append(row);
+
+      // Mettre à jour les graphiques
+      chartTemp.update();
+      chartPluie.update();
+    };
+  </script>
+
+</body>
+</html>
